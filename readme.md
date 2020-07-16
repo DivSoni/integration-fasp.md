@@ -1,21 +1,21 @@
 # Build and Deploy integrations and use fasp.io to transfer between two geo locations
-   
+
 ### Introduction  
 
 In this tutorial, we are going to create a banking integration application that gets invoked by an API. It uses integration capabilities to map the inbound request to a transaction that is sent over to MQ via fast and secure protocol (fasp.io) to another queue manager in Singapore. It also creates an event and publishes the event to a topic in Event Streams.
 
-### Architecture 
+### Architecture
 ![Pic 1](images/image1.png)  
 
 In this tutorial, we have CP4I running in IBM Cloud in San Jose. This is where we will create the API, create integration flows and send the message over to MQ and Event Streams. When the message arrives on the local queue manager in San Jose, it is delivered over fasp protocol to MQ in Singapore.   
 
 ### Assumptions and Prerequisites
-* This document assumes you have a basic working knowledge of MQ, API Connect, ACE and Event Streams. 
-* A cloud pak for integration (CP4I) environment is deployed along with the following capabilities installed 
+* This document assumes you have a basic working knowledge of MQ, API Connect, ACE and Event Streams.
+* A cloud pak for integration (CP4I) environment is deployed along with the following capabilities installed
 	- MQ   
 	- Event Streams
 	- App Connect Enterprise
-	- API Connect. 
+	- API Connect.
 * A VM is deployed in a different geo location with MQ and fasp.io installed.
 * App Connect Enterprise toolkit installed on the developers laptop
 
@@ -25,10 +25,10 @@ In this tutorial, we have CP4I running in IBM Cloud in San Jose. This is where w
 2	Configure MQ   
 3 	Configure Event Streams  
 4	Configure an app connect enterprise flow to get message from the REST call, map it, send it to MQ and Event Streams.  
-5	Expose the as an API	
+5	Expose the as an API
 6	Test the end to end flow
 7	View the transactions using Operations Dashboard
-``` 
+```
 ### Estimated Time
 80 minutes
 
@@ -77,12 +77,12 @@ In our case, in the CP4i VM side (fasp.io GW1), we will use the following config
   [bridge.local]
       protocol = “tcp”
         host = “0.0.0.0"
-        port = 54321
+        port = <your port>
 
   [bridge.forward]
       protocol = “fasp”
-        host = “161.202.162.183"
-        port = 54321
+        host = “XXX.XXX.XXX.XXX"
+        port = <your port>
 
 ```
 The section **bridge.local** describes where the Gateway will be listening for local connections from the sender, in this case, MQ in CP4i (MQ1).
@@ -96,12 +96,12 @@ In Singapore (fasp.io GW2), we have the following configuration file:
   [bridge.local]
       protocol = “fasp”
         host = “0.0.0.0"
-        port = 54321
+        port = <your port>
 
   [bridge.forward]
       protocol = “tcp”
         host = “127.0.0.1"
-        port = 1414`
+        port = <your port>
 ```
 
 The section **bridge.local** describes where the Gateway is listening for fasp connections from another Gateway (fasp.io GW1). The port in this section has to be the same as the port in the **bridge.forward** section in the opposite fasp.io Gateway (fasp.io GW1). In this case: 54321.
@@ -116,7 +116,7 @@ This configuration only covers one way. If we want to create a bidirectional con
 
 ***To learn the basics of MQ, go to https://developer.ibm.com/messaging/learn-mq/mq-tutorials/mq-dev-essentials/***
 
-Next, we will configure both MQ queue managers as shown in this diagram. 
+Next, we will configure both MQ queue managers as shown in this diagram.
 
 ![Pic mqarch](images/mqarch.png)
 
@@ -146,16 +146,16 @@ define channel(TESTQM.QM1) chltype(SDR) conname ('connection_name(port)') xmitq(
 
 ```
 
--	Next, let's define the queue objects on the queue manager in Singapore. We are calling the queue manager in Singapore QM1. 
+-	Next, let's define the queue objects on the queue manager in Singapore. We are calling the queue manager in Singapore QM1.
 
 *Singapore Queue Manager*
 ```
-1. Define and start a Listener. The following using the default port 1414. 
+1. Define and start a Listener. The following using the default port 1414.
 define listener(LISTENER) trptype(tcp) control(qmgr) port(1414)
 start listener(LISTENER)
 
 2. Define a local queue:  
-define qlocal(QM1.LOCAL)  maxmsgl(104857600) 
+define qlocal(QM1.LOCAL)  maxmsgl(104857600)
 
 3. Define a receiving channel by typing the following command:  
 define channel(TESTQM.QM1) chltype(RCVR) trptype(TCP)  maxmsgl(104857600)
@@ -164,12 +164,12 @@ define channel(TESTQM.QM1) chltype(RCVR) trptype(TCP)  maxmsgl(104857600)
 ### Step 3- Configure Event Streams
 ***To learn the basics of Event Streams, go to https://developer.ibm.com/components/event-streams/***
 
-Next, we will configure Event Streams - the notification component in this diagram - 
+Next, we will configure Event Streams - the notification component in this diagram -
 ![Pic esarch](images/esarch.png)
 
 1.	Create a topic in Event Streams by going to the event streams page and selecting create topic.  
 ![Pic 2](images/image2.png)  
-Let's call it **moneydeposited**. Hit next and click **create topic** 
+Let's call it **moneydeposited**. Hit next and click **create topic**
 
 2. Now click on ***topics***, and select the topic you just created. Then click on ***connect to this cluster***
 
@@ -207,20 +207,20 @@ Next, we will configure an ACE flow that will do mapping and connect to MQ and E
 5.	Before you can deploy the bar file in cloud pak for integration, you have to generate a secret.  
 
 	a.	Generate Secret to connect to event streams topic. You can follow  **Appendix A -ACE-to_EventStreams-Connection** document in the bottom of this document.
-	
+
 	b.	After the secret is generated. You are now ready to deploy the broker archive (BAR) file.  
-	
+
 	c.	Go to your cloud pak for integration console, select App Connect Dashboard instance ACE.  
-	![Pic 10](images/image10.png) 
-	
+	![Pic 10](images/image10.png)
+
 	d.  Select Toolkit. Select Next
-	
+
 	e. 	Fill out the helm chart as follows -  
 	![Pic 11](images/image11.png)
-	
+
 	f. 	Select ***show everything*** on the left side of the screen and scroll down to ***Integration Server***.  
 	![Pic 12](images/image12.png)
-	
+
 	g.	Your ace flow should be started. Check logs if its not started.
 
 ### Step 5- Expose the flow as an API
@@ -229,7 +229,7 @@ So far, you have created an integration that connects with MQ in San Jose that s
 ![Pic APIArch](images/API-Architecture.png)
 
 
- Let's get started - 
+ Let's get started -
 
 1.	Import the yaml file into API Connect. Go to the main page of API Connect instance and select develop and then add.  
 ![Pic 13](images/api13.png)
@@ -262,7 +262,7 @@ So far, you have created an integration that connects with MQ in San Jose that s
 
 5. Select the environment to publish to. In our case it's our sandbox environment.
 
-6. Now go to the portal and test out the API. Log into the Developer Portal. 
+6. Now go to the portal and test out the API. Log into the Developer Portal.
 
 7. Select the product that we just created - Send Transactions and Events 1.0.0.
 
@@ -278,16 +278,16 @@ So far, you have created an integration that connects with MQ in San Jose that s
 12. Test the new API by selecting **Send**  
 
 ### Step 6- Test the end to end flow   
-![Pic 22](images/image22.png) 
+![Pic 22](images/image22.png)
 
 1.	Invoke the API using the developer portal  
-![Pic 23](images/image23.png) 
+![Pic 23](images/image23.png)
 
 2. By Invoking this API, you should now see a message on the queue in Singapore Data Center. Browse the queue using MQ Explorer or amqsbcg or other tools you typically use to browse queues. You will see the following message on the queue.  
-![Pic 24](images/image24.png) 
+![Pic 24](images/image24.png)
 
 3. You should also see an event message generated in event streams. Go to Event Streams topic "MoneyDeposited" in Cloud Pak for Integration. GO to **Messages**, and select the partition.  
-![Pic 25](images/image25.png) 
+![Pic 25](images/image25.png)
 
 
 ### Step 7- Using Operations Dashboard
@@ -301,28 +301,28 @@ Cloud Pak for Integration - Operations Dashboard Add-on is based on Jaeger open 
 3.	Go to tracing on the left, and here you will be able to see all the transactions that were sent. You can filter with **ClientID** in the add filter section and give it the client ID you have been testing with.  
 ![Pic 27](images/image27.png)
 
-4.  Click on a transaction, and it will bring you to the trace information for that transaction. On the top left, you will see all the capabilities and services that the transaction went through. Here you can see the latency for every action within the flow. 
+4.  Click on a transaction, and it will bring you to the trace information for that transaction. On the top left, you will see all the capabilities and services that the transaction went through. Here you can see the latency for every action within the flow.
 ![Pic 28](images/image28.png)
 
-5.  Click on the **msgFlowTransaction** and you will see more details of the transaction within that action. 
+5.  Click on the **msgFlowTransaction** and you will see more details of the transaction within that action.
 ![Pic 29](images/image29.png)
 
 6.	Click on other operations and browse through other fields.
 
 ### Summary
-This tutorial showed you how to - 
+This tutorial showed you how to -
 
-1. Create an API that invokes an Integration Flow. 
+1. Create an API that invokes an Integration Flow.
 2.	Create an integration flow that generates events and publishes them to event streams.
 3.	And sends a message to MQ over fast and secure protocol to different geo location.
-4.	View tracing components for each capability used within Cloud Pak for Integration. 
-5.	Without writing a single piece of code! 
+4.	View tracing components for each capability used within Cloud Pak for Integration.
+5.	Without writing a single piece of code!
 
 
 
 -------
 
-### About Authors - 
+### About Authors -
 
 **Divya Soni** is a driven technologist with hands on experience in designing and implementing integration solutions on hybrid and multi-cloud platforms. She started her career in production support for integration products. During her tenure she wore multiple hats - from production support to architecture and then eventually leading CoE teams at major healthcare, financial and hospitality industries. 
 Later, she pursued careers at Google and IBM to help customers on their hybrid cloud journey.  Currently, she is a member of the Tiger team at IBM where she continues to work with world wide customers and help them design their cloud native architecture and modernization strategies in messaging and integration.
@@ -331,7 +331,7 @@ Later, she pursued careers at Google and IBM to help customers on their hybrid c
 **Blogs** - https://medium.com/@iamdivyasoni  
 **LinkedIn** - https://www.linkedin.com/in/iamdivyasoni/
 
-**Fernando Boom** has been part of IBM Aspera organization since 2013. First in France, assisting European customers and then in the US. He moved on different customer facing positions, always assisting customers with understanding the technology and its use cases, designing and troubleshooting complex architectures. Currently, he is a member of the Tiger team at IBM. 
+**Fernando Boom** has been part of IBM Aspera organization since 2013. First in France, assisting European customers and then in the US. He moved on different customer facing positions, always assisting customers with understanding the technology and its use cases, designing and troubleshooting complex architectures. Currently, he is a member of the Tiger team at IBM.
 
 -
 
@@ -342,12 +342,12 @@ Later, she pursued careers at Google and IBM to help customers on their hybrid c
 The instructions below will outline the steps to connect ACE flow with event streams.   
 
 ### Prerequisites
-* This article assumes you have working knowledge of Cloud Pak for integration, ACE toolkit and Event Streams. 
+* This article assumes you have working knowledge of Cloud Pak for integration, ACE toolkit and Event Streams.
 * You have an existing ACE Flow that uses a Kafka Consumer or producer node
 * You have an existing CP4I environment with Event Streams running
 
 ### The instructions here are broken down in four parts
-* Event Streams configuration 
+* Event Streams configuration
 * Message Flow configuration in the ACE toolkit
 * Prepare App Connect Enterprise parameters to connect to Event Streams
 * Deploy BAR file on ACE server
@@ -355,18 +355,18 @@ The instructions below will outline the steps to connect ACE flow with event str
 ### Event Streams Configuration
 * Go to your event streams environment, and get the following information:  
 		Topic Name (Where you want to publish events to)
-		
-  		
-![ ](images/acetoespic1.png)    
-  	
-	- Copy the bootstrap server address. 
-	- Create an API Key by going through the steps under API Key  
-	- Download the PEM certificate 
-	- Remember the password for the truststore: password. 
- 	
 
-### ACE toolkit message flow configuration 
-* Go to your ACE message flow where you are using KAFKA node. In this example, I am using a Kafka Publisher node. Under Basic, give your Topic name; Bootstrap servers. 
+
+![ ](images/acetoespic1.png)    
+
+	- Copy the bootstrap server address.
+	- Create an API Key by going through the steps under API Key  
+	- Download the PEM certificate
+	- Remember the password for the truststore: password.
+
+
+### ACE toolkit message flow configuration
+* Go to your ACE message flow where you are using KAFKA node. In this example, I am using a Kafka Publisher node. Under Basic, give your Topic name; Bootstrap servers.
 
 ![ ](images/acetoespic2.png)
 
@@ -383,19 +383,19 @@ The instructions below will outline the steps to connect ACE flow with event str
 	```setdbparms.txt```     
 	```truststoreCert-mykey.crt```  
 	```truststorePassword.txt```    
-* Go to your desktop and untar the config directory to a location of your choice and then change directory into that location. In the next few steps, we will edit some of these files. 
+* Go to your desktop and untar the config directory to a location of your choice and then change directory into that location. In the next few steps, we will edit some of these files.
 
 * Open the previously downloaded **es-api-key.json** and copy the api key between **" "**. Edit **setdbparms.yaml** file to include the API key right after token like this. (You need to copy the Event Streams API Key here.) :  
 ![ ](images/acetoespic4.png)
-		
+
 * Next you will use the PEM certificate **es-cert.pem** that you previously downloaded. In your terminal window copy the **es-cert.pem** to the config directory. Copy it as **truststoreCert-mykey.crt**. This is the cert name **generatesecrets.sh** looks for when executed.
 
-* Log into your openshift environment with CLI. You can copy the login command from the Openshift console in the top right corner under your ID. 
+* Log into your openshift environment with CLI. You can copy the login command from the Openshift console in the top right corner under your ID.
 
-* Once logged in, type ```oc project ace``` 
+* Once logged in, type ```oc project ace```
 * In the config directory, edit **truststorePassword.txt** and add the password in the file. In our case, password is **password**.
 
-* Your **config** directory should look like this. The arrow points to all the files that will be used to generate the secret. 
+* Your **config** directory should look like this. The arrow points to all the files that will be used to generate the secret.
 ![ ](images/acetoespic5.png)
 
 * From the config directory, execute **./generateSecrets.sh my-secret**
@@ -408,10 +408,10 @@ Go to your openshift console --> ACE Namespace --> Resources --> Secrets --> my-
 
 ### Deploy App Connect BAR file on App Connect Enterprise Server
 * Go into Cloud Pak for Integration and deploy a new server using your BAR file.
-* Fill in all the details as you normally would. 
-* Scroll down, locate **Integration Server** configuration. Type **mykey** into **List of Certificate aliases for the truststore**, you created as **truststoreCert-mykey.crt**. 
+* Fill in all the details as you normally would.
+* Scroll down, locate **Integration Server** configuration. Type **mykey** into **List of Certificate aliases for the truststore**, you created as **truststoreCert-mykey.crt**.
 * Enter the name of the secret: **my-secret**
 * Select **Install**
 
 ### Test
-* Once the install is successful, test your flow and you should see an event in a topic in Event Streams. 
+* Once the install is successful, test your flow and you should see an event in a topic in Event Streams.
